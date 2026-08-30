@@ -34,4 +34,29 @@ int main(int argc, char const *argv[])
         erode(diff, diff, clear);
         dilate(diff, diff, clear);
 
+
+         vector<vector<Point>> contours;
+        findContours(diff, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+        for (auto &c : contours)
+        {
+            if (contourArea(c) < 100)
+                continue;
+            Rect bbox = boundingRect(c);
+
+            rectangle(frame, bbox, Scalar(0, 0, 255), 2);
+        }
+
+        grayPrev = grayFrame.clone();
+
+        imshow("in", frame);
+        imshow("out", diff);
+
+        if (waitKey(1) == 'q')
+            break;
+    }
+    cap.release();
+    destroyAllWindows();
+
+    return 0;
+
     }

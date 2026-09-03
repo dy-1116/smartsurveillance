@@ -1,3 +1,9 @@
+// 运动检测
+// 灰度→模糊→帧差→二值化→形态学→轮廓→画框
+
+
+
+
 #include "include.h"
 
 using namespace std;

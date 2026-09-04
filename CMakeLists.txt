@@ -1,26 +1,21 @@
-# cmake needs this line
 cmake_minimum_required(VERSION 3.5)
+project(SmartMonitor VERSION 0.1 LANGUAGES CXX)
 
-# Define project name
-project(hello)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
-# Find OpenCV, you may need to set OpenCV_DIR variable
-# to the absolute path to the directory containing OpenCVConfig.cmake file
-# via the command line or GUI
-find_package(OpenCV REQUIRED)
+find_package(Qt5 REQUIRED COMPONENTS Widgets)
 
-# If the package has been found, several variables will
-# be set, you can find the full list with descriptions
-# in the OpenCVConfig.cmake file.
-# Print some message showing some of them
-message(STATUS "OpenCV library status:")
-message(STATUS "    config: ${OpenCV_DIR}")
-message(STATUS "    version: ${OpenCV_VERSION}")
-message(STATUS "    libraries: ${OpenCV_LIBS}")
-message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
+# 告诉编译器去 include 目录找头文件
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Declare the executable target built from your sources
-add_executable(app main.cxx)
+add_executable(SmartMonitor
+    src/main.cpp
+    src/MainWindow.cpp
+    include/MainWindow.h
+)
 
-# Link your application with OpenCV libraries
-target_link_libraries(app PRIVATE ${OpenCV_LIBS})
+target_link_libraries(SmartMonitor Qt5::Widgets)

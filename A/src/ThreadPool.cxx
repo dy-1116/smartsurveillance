@@ -1,37 +1,36 @@
 // 并发
 // 固定线程数，条件变量调度，有界队列
+// ThreadPool 实现（成员A）
 
 #include "ThreadPool.h"
+
 #include <iostream>
 #include <stdexcept>
-#include <functional>
 
-// ThreadPool 构造函数：初始化工作线程池
+// 构造函数：初始化工作线程池
 ThreadPool::ThreadPool(size_t numThreads) : m_stop(false) {
-    // 处理默认线程数：自动适配CPU核心数
+    // 处理默认线程数：自动适配 CPU 核心数
     if (numThreads == 0) {
         numThreads = std::thread::hardware_concurrency();
-        // 保底处理：部分平台可能无法获取硬件并发数，默认使用4线程
+        // 保底处理：部分平台可能无法获取硬件并发数，默认使用 4 线程
         if (numThreads == 0) {
             numThreads = 4;
         }
     }
 
     // 启动指定数量的工作线程
+    m_workers.reserve(numThreads);
     for (size_t i = 0; i < numThreads; ++i) {
         m_workers.emplace_back(&ThreadPool::worker, this);
     }
 }
 
-// 工作线程主函数：循环从任务队列取任务并执行
+// 工作线程主函数：从任务队列取任务并执行，直到队列停止且清空
 void ThreadPool::worker() {
     while (true) {
         std::function<void()> task;
-        // 阻塞等待任务，直到有任务可处理
-        m_tasks.waitAndPop(task);
-
-        // 如果线程池已停止且队列为空，退出线程
-        if (m_stop && m_tasks.empty()) {
+        // 阻塞等待任务：队列被 stop 且已清空时返回 false，线程退出
+        if (!m_tasks.waitAndPop(task)) {
             break;
         }
 
@@ -48,18 +47,17 @@ void ThreadPool::worker() {
     }
 }
 
-// 提交任务到线程池
-void ThreadPool::enqueue(std::function<void()> task) {
-    if (m_stop) {
+// 提交任务到线程池（公共模板 enqueue 转发到这里）
+void ThreadPool::enqueueImpl(std::function<void()> task) {
+    if (m_stop.load()) {
         throw std::runtime_error("Cannot enqueue task on a stopped ThreadPool");
     }
-    // 使用移动语义传递任务，避免std::function的拷贝开销
     m_tasks.push(std::move(task));
 }
 
-// 停止线程池，等待所有任务完成后回收线程
+// 停止线程池：停止接收新任务，等已入队任务执行完后回收线程
 void ThreadPool::stop() {
-    // 原子操作防止重复停止，避免多次join线程
+    // 原子操作防止重复停止，避免多次 join 线程
     if (m_stop.exchange(true)) {
         return;
     }
@@ -73,13 +71,12 @@ void ThreadPool::stop() {
             worker.join();
         }
     }
-
     m_workers.clear();
 }
 
-// 析构函数：RAII自动资源管理，确保线程池正确停止
+// 析构函数：RAII 自动资源管理，确保线程池正确停止
 ThreadPool::~ThreadPool() {
-    if (!m_stop) {
+    if (!m_stop.load()) {
         stop();
     }
 }
